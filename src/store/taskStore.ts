@@ -10,6 +10,7 @@ interface TaskStore {
   deleteTask: (id: string) => void
   toggleTask: (id: string) => void
   selectTask: (id: string | null) => void
+  updateTask: (id: string, updates: Partial<Task>) => void
   incrementTaskPomodoro: (id: string) => void
   clearCompleted: () => void
 }
@@ -49,6 +50,13 @@ export const useTaskStore = create<TaskStore>()(
         })),
 
       selectTask: (id) => set({ selectedTaskId: id }),
+
+      updateTask: (id, updates) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id ? { ...t, ...updates } : t
+          ),
+        })),
 
       incrementTaskPomodoro: (id) =>
         set((state) => ({
