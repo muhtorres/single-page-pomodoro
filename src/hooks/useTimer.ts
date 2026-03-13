@@ -4,6 +4,7 @@ import { useTimerStore } from '@/store/timerStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useTaskStore } from '@/store/taskStore'
 import { playTimerEndSound } from '@/lib/audio'
+import { createSession } from '@/lib/api'
 import { TimerMode } from '@/types'
 
 export function useTimer() {
@@ -48,10 +49,30 @@ export function useTimer() {
     if (settings.soundEnabled) playTimerEndSound(settings.volume)
 
     const { mode: currentMode, sessionCount: currentCount } = useTimerStore.getState()
+    const { selectedTaskId: currentTaskId } = useTaskStore.getState()
+
+    // Record session to backend (fire-and-forget, no UI blocking)
+    if (typeof window !== 'undefined' && window.localStorage.getItem('auth_token')) {
+      const durationMinutes =
+        currentMode === 'pomodoro'
+          ? settings.pomodoroDuration
+          : currentMode === 'shortBreak'
+          ? settings.shortBreakDuration
+          : settings.longBreakDuration
+
+      createSession({
+        mode: currentMode,
+        durationMinutes,
+        taskId: currentTaskId,
+        wasCompleted: true,
+      }).catch(() => {
+        // Session recording failure is non-critical
+      })
+    }
 
     if (currentMode === 'pomodoro') {
       incrementSessionCount()
-      if (selectedTaskId) incrementTaskPomodoro(selectedTaskId)
+      if (currentTaskId) incrementTaskPomodoro(currentTaskId)
 
       const newCount = currentCount + 1
       const nextMode: TimerMode =
