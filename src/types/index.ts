@@ -11,6 +11,16 @@ export interface Task {
   createdAt: number
 }
 
+// Authenticated user
+export interface AuthUser {
+  id: string
+  email: string
+  name: string
+  avatarUrl?: string | null
+  provider: string
+  createdAt: string
+}
+
 // User-configurable settings
 export interface Settings {
   pomodoroDuration: number
