@@ -4,108 +4,104 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a production-ready, single-page Pomodoro Timer application built with Next.js 14, React, TypeScript, and Tailwind CSS. It implements the Pomodoro Technique with a clean, distraction-free UI that includes:
+Full-stack Pomodoro Timer application. Monorepo with two projects:
 
-- Background color shifting between modes (red for focus, teal for short breaks, blue for long breaks)
-- Circular SVG progress ring that counts down visually
-- Task management to track pomodoros per task
-- All data persisted locally using localStorage
+- **`pomodoro-frontend/`** — Next.js SPA (React + TypeScript + Tailwind + Zustand)
+- **`pomodoro-api/`** — .NET 10 REST API (EF Core + PostgreSQL via Supabase)
+
+Users can sign in via OAuth (GitHub, Google, Facebook) to sync tasks and sessions across devices, or use the app offline with localStorage.
 
 ## Tech Stack
 
-- **Next.js 14** (App Router) - Framework + static export
+### Frontend (`pomodoro-frontend/`)
+- **Next.js** (App Router) - Framework + static export
 - **React 18** - UI
 - **TypeScript 5** - Type safety
 - **Tailwind CSS 3** - Styling
-- **Zustand 4** - State management
+- **Zustand** - State management
 - **Jest + React Testing Library** - Testing
 - **ESLint + Prettier** - Code quality
 
+### Backend (`pomodoro-api/`)
+- **.NET 10** (ASP.NET Core) - Web API
+- **Entity Framework Core** - ORM + migrations
+- **Npgsql** - PostgreSQL driver
+- **JWT Bearer** - API authentication
+- **Supabase** - PostgreSQL hosting (free)
+- **Fly.io** - API hosting (free)
+
 ## Architecture
 
-The application follows a clear separation of concerns:
-
-### Core Components
-- `src/app/page.tsx` - Main SPA page (entry point) with layout and component composition
-- `src/components/` - Reusable UI components organized by feature:
-  - Timer components (CircularProgress, TimerDisplay, TimerControls)
-  - Task components (AddTask, TaskItem, TaskList)
-  - Settings component (SettingsModal)
-  - Layout components (Header)
-- `src/hooks/` - Custom React hooks:
-  - `useTimer` - Core timer logic and mode transitions
-  - `useKeyboard` - Global keyboard shortcut handling
-  - `useNotification` - Browser Notification API integration
-- `src/store/` - Zustand stores for state management:
-  - `timerStore` - Timer state (mode, secondsLeft, isRunning, sessionCount)
-  - `taskStore` - Task CRUD operations with localStorage persistence
-  - `settingsStore` - User settings with localStorage persistence
-- `src/lib/` - Utility functions:
-  - `audio.ts` - Web Audio API sound synthesis (no audio files needed)
+### Frontend components
+- `pomodoro-frontend/src/app/page.tsx` - Main SPA page (entry point)
+- `pomodoro-frontend/src/app/auth/callback/page.tsx` - OAuth callback handler
+- `pomodoro-frontend/src/components/` - UI components by feature:
+  - `Auth/LoginModal.tsx` - OAuth login buttons
+  - `Timer/` - CircularProgress, TimerDisplay, TimerControls
+  - `Tasks/` - AddTask, TaskItem, TaskList, TaskPanel
+  - `Settings/SettingsModal.tsx`
+  - `Layout/Header.tsx` - Title, session counter, avatar/logout
+- `pomodoro-frontend/src/hooks/` - Custom React hooks:
+  - `useTimer` - Timer logic, mode transitions, session recording
+  - `useKeyboard` - Global keyboard shortcuts
+  - `useNotification` - Browser Notification API
+- `pomodoro-frontend/src/store/` - Zustand stores:
+  - `authStore` - JWT auth state (login/logout/rehydrate)
+  - `timerStore` - Timer state (not persisted)
+  - `taskStore` - Task CRUD (API when authenticated, localStorage otherwise)
+  - `settingsStore` - User settings (localStorage)
+- `pomodoro-frontend/src/lib/` - Utilities:
+  - `api.ts` - HTTP client with automatic JWT Authorization header
+  - `audio.ts` - Web Audio API sound synthesis
   - `localStorage.ts` - SSR-safe localStorage wrapper
 
+### Backend structure
+- `pomodoro-api/src/PomodoroApi/Controllers/` - AuthController, TasksController, SessionsController
+- `pomodoro-api/src/PomodoroApi/Models/` - User, TaskItem, PomodoroSession
+- `pomodoro-api/src/PomodoroApi/Data/AppDbContext.cs` - EF Core context
+- `pomodoro-api/src/PomodoroApi/Services/TokenService.cs` - JWT generation/validation
+- `pomodoro-api/src/PomodoroApi/Program.cs` - DI, auth, CORS, middleware
+
 ### Key Design Patterns
-- **State Management**: Uses Zustand for global state management with persistence middleware
-- **Persistence**: All user data (tasks and settings) is persisted to localStorage
-- **Timer Logic**: Timer state is intentionally not persisted across page reloads (correct Pomodoro UX)
-- **Audio**: Web Audio API synthesizes timer sounds instead of using audio files
-- **Keyboard Shortcuts**: Global keyboard shortcuts with proper focus management
-- **Accessibility**: ARIA roles, keyboard navigation, and focus management
+- **Auth**: Backend-side OAuth flow -> JWT token -> frontend stores in localStorage
+- **Dual persistence**: API when authenticated, localStorage when not
+- **Session recording**: Fire-and-forget in useTimer (non-blocking)
+- **Timer state**: Intentionally not persisted (correct Pomodoro UX)
+- **Audio**: Web Audio API synthesizes sounds (no audio files)
 
 ## Development Setup
 
-### Prerequisites
-- Node.js 18 or higher
-- npm 9 or higher
-
-### Running Locally
+### Frontend
 ```bash
+cd pomodoro-frontend
 npm install
 npm run dev
 ```
-Open http://localhost:3000 in your browser.
+Open http://localhost:3000
 
-### Testing
+### Backend
 ```bash
-# Run all 134 tests once
-npm test
+cd pomodoro-api/src/PomodoroApi
+dotnet run
+```
+API runs at http://localhost:5000. Configure `appsettings.Development.json` with DB connection string and OAuth credentials.
 
-# Watch mode — reruns on every file save (great for development)
-npm run test:watch
-
-# Generate a coverage report
-npm run test:coverage
+### Testing (frontend)
+```bash
+cd pomodoro-frontend
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
 ```
 
-### Build & Deployment
+### Build
 ```bash
-# Production build → /out directory
-npm run build
+# Frontend
+cd pomodoro-frontend && npm run build
 
-# Lint and format
-npm run lint
-npm run format
+# Backend
+cd pomodoro-api/src/PomodoroApi && dotnet build
+
+# Backend migrations
+cd pomodoro-api/src/PomodoroApi && dotnet ef migrations add MigrationName --output-dir Data/Migrations
 ```
-
-## Key Features
-
-### Timer Modes
-- Pomodoro (25m) - Focus mode
-- Short Break (5m) - After every pomodoro
-- Long Break (15m) - After every 4 pomodoros
-
-### Keyboard Shortcuts
-- Space: Start/Pause timer
-- R: Reset current timer
-- 1: Switch to Pomodoro
-- 2: Switch to Short Break
-- 3: Switch to Long Break
-- Ctrl+,: Open Settings
-
-### Persistence
-- Tasks and settings are saved to localStorage
-- Timer state is not persisted (reloads to fresh session)
-
-### Audio
-- Web Audio API synthesizes timer-end sounds
-- No audio files required, works offline
