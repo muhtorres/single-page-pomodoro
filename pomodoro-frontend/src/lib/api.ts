@@ -1,6 +1,6 @@
-import { AuthUser, Task, TimerMode } from '@/types'
+import { AuthUser, Project, Task, TimerMode } from '@/types'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5175'
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -38,6 +38,55 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   return request<AuthUser>('/api/auth/me')
 }
 
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+export interface ApiProject {
+  id: string
+  name: string
+  color: string
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+function apiProjectToProject(p: ApiProject): Project {
+  return {
+    id: p.id,
+    name: p.name,
+    color: p.color,
+    isDefault: p.isDefault,
+    createdAt: new Date(p.createdAt).getTime(),
+  }
+}
+
+export async function fetchProjects(): Promise<Project[]> {
+  const apiProjects = await request<ApiProject[]>('/api/projects')
+  return apiProjects.map(apiProjectToProject)
+}
+
+export async function createProject(name: string, color: string): Promise<Project> {
+  const apiProject = await request<ApiProject>('/api/projects', {
+    method: 'POST',
+    body: JSON.stringify({ name, color }),
+  })
+  return apiProjectToProject(apiProject)
+}
+
+export async function updateProject(
+  id: string,
+  updates: { name?: string; color?: string }
+): Promise<Project> {
+  const apiProject = await request<ApiProject>(`/api/projects/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  })
+  return apiProjectToProject(apiProject)
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  return request<void>(`/api/projects/${id}`, { method: 'DELETE' })
+}
+
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
 export interface ApiTask {
@@ -48,6 +97,7 @@ export interface ApiTask {
   actualPomodoros: number
   createdAt: string
   updatedAt: string
+  projectId: string | null
 }
 
 function apiTaskToTask(t: ApiTask): Task {
@@ -58,6 +108,7 @@ function apiTaskToTask(t: ApiTask): Task {
     estimatedPomodoros: t.estimatedPomodoros,
     actualPomodoros: t.actualPomodoros,
     createdAt: new Date(t.createdAt).getTime(),
+    projectId: t.projectId,
   }
 }
 
@@ -66,10 +117,14 @@ export async function fetchTasks(): Promise<Task[]> {
   return apiTasks.map(apiTaskToTask)
 }
 
-export async function createTask(title: string, estimatedPomodoros: number): Promise<Task> {
+export async function createTask(
+  title: string,
+  estimatedPomodoros: number,
+  projectId?: string | null
+): Promise<Task> {
   const apiTask = await request<ApiTask>('/api/tasks', {
     method: 'POST',
-    body: JSON.stringify({ title, estimatedPomodoros }),
+    body: JSON.stringify({ title, estimatedPomodoros, projectId: projectId ?? null }),
   })
   return apiTaskToTask(apiTask)
 }
@@ -81,6 +136,7 @@ export async function updateTask(
     estimatedPomodoros?: number
     actualPomodoros?: number
     isCompleted?: boolean
+    projectId?: string | null
   }
 ): Promise<Task> {
   const apiTask = await request<ApiTask>(`/api/tasks/${id}`, {

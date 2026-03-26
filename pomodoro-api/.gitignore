@@ -35,6 +35,7 @@ packages/
 
 # Sensitive config
 appsettings.Production.json
+*/appsettings.Development.json
 appsettings.Secrets.json
 secrets.json
 

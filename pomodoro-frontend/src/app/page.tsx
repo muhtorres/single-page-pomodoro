@@ -6,11 +6,13 @@ import { TimerControls } from '@/components/Timer/TimerControls'
 import { TaskList } from '@/components/Tasks/TaskList'
 import { TaskPanel } from '@/components/Tasks/TaskPanel'
 import { SettingsModal } from '@/components/Settings/SettingsModal'
+import { ProjectsModal } from '@/components/Projects/ProjectsModal'
 import { LoginModal } from '@/components/Auth/LoginModal'
 import { useTimer } from '@/hooks/useTimer'
 import { useKeyboard } from '@/hooks/useKeyboard'
 import { useNotification } from '@/hooks/useNotification'
 import { useAuthStore } from '@/store/authStore'
+import { useProjectStore } from '@/store/projectStore'
 import { MODE_COLORS, MODE_LABELS, TimerMode } from '@/types'
 
 const MODES: { key: TimerMode; label: string }[] = [
@@ -21,20 +23,24 @@ const MODES: { key: TimerMode; label: string }[] = [
 
 export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [projectsOpen, setProjectsOpen] = useState(false)
   const [taskPanelOpen, setTaskPanelOpen] = useState(false)
   const [loginDismissed, setLoginDismissed] = useState(false)
   const { mode, secondsLeft, isRunning, sessionCount, toggle, reset, switchMode } = useTimer()
   const { requestPermission } = useNotification()
   const { isAuthenticated, isLoading, rehydrate } = useAuthStore()
+  const { initProjects } = useProjectStore()
 
-  // Rehydrate auth state from localStorage on mount
+  // Rehydrate auth state from localStorage on mount, then init projects
   useEffect(() => {
-    rehydrate()
+    rehydrate().then(() => {
+      initProjects()
+    })
     // Restore login-dismissed preference
     if (typeof window !== 'undefined') {
       setLoginDismissed(!!window.localStorage.getItem('login_dismissed'))
     }
-  }, [rehydrate])
+  }, [rehydrate, initProjects])
 
   // Update background color CSS variable based on current mode
   useEffect(() => {
@@ -53,6 +59,8 @@ export default function HomePage() {
 
   const openSettings = useCallback(() => setSettingsOpen(true), [])
   const closeSettings = useCallback(() => setSettingsOpen(false), [])
+  const openProjects = useCallback(() => setProjectsOpen(true), [])
+  const closeProjects = useCallback(() => setProjectsOpen(false), [])
 
   const handleContinueWithoutLogin = useCallback(() => {
     setLoginDismissed(true)
@@ -77,6 +85,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-gray-900 flex flex-col items-center px-4 py-8 text-white">
       <Header
         onSettingsClick={openSettings}
+        onProjectsClick={openProjects}
         sessionCount={sessionCount}
         panelOpen={taskPanelOpen}
         setPanelOpen={setTaskPanelOpen}
@@ -138,6 +147,9 @@ export default function HomePage() {
 
       {/* Settings modal */}
       {settingsOpen && <SettingsModal onClose={closeSettings} />}
+
+      {/* Projects modal */}
+      {projectsOpen && <ProjectsModal onClose={closeProjects} />}
 
       {/* Login modal (shown when not authenticated and not dismissed) */}
       {showLoginModal && <LoginModal onContinueWithoutLogin={handleContinueWithoutLogin} />}

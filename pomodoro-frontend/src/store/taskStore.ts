@@ -7,7 +7,7 @@ import * as api from '@/lib/api'
 interface TaskStore {
   tasks: Task[]
   selectedTaskId: string | null
-  addTask: (title: string, estimatedPomodoros?: number) => Promise<void>
+  addTask: (title: string, estimatedPomodoros?: number, projectId?: string | null) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   toggleTask: (id: string) => Promise<void>
   selectTask: (id: string | null) => void
@@ -34,9 +34,9 @@ export const useTaskStore = create<TaskStore>()(
         set({ tasks, selectedTaskId: null })
       },
 
-      addTask: async (title, estimatedPomodoros = 1) => {
+      addTask: async (title, estimatedPomodoros = 1, projectId = null) => {
         if (isAuthenticated()) {
-          const task = await api.createTask(title, estimatedPomodoros)
+          const task = await api.createTask(title, estimatedPomodoros, projectId)
           set((state) => ({ tasks: [...state.tasks, task] }))
         } else {
           set((state) => ({
@@ -49,6 +49,7 @@ export const useTaskStore = create<TaskStore>()(
                 estimatedPomodoros,
                 actualPomodoros: 0,
                 createdAt: Date.now(),
+                projectId: projectId ?? null,
               },
             ],
           }))
@@ -91,6 +92,7 @@ export const useTaskStore = create<TaskStore>()(
           if (updates.actualPomodoros !== undefined)
             apiUpdates.actualPomodoros = updates.actualPomodoros
           if (updates.completed !== undefined) apiUpdates.isCompleted = updates.completed
+          if (updates.projectId !== undefined) apiUpdates.projectId = updates.projectId
           await api.updateTask(id, apiUpdates)
         }
         set((state) => ({

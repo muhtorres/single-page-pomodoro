@@ -1,13 +1,9 @@
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PomodoroApi.Data;
 using PomodoroApi.DTOs;
-using PomodoroApi.Models;
 using PomodoroApi.Services;
 
 namespace PomodoroApi.Controllers;
@@ -15,12 +11,32 @@ namespace PomodoroApi.Controllers;
 [ApiController]
 [Route("api/auth")]
 public class AuthController(
-    AppDbContext db,
+    IAuthService authService,
     ITokenService tokenService,
     IConfiguration configuration,
-    IHttpClientFactory httpClientFactory) : ControllerBase
+    IHttpClientFactory httpClientFactory,
+    IHostEnvironment env) : ControllerBase
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    // ─── Dev login (Development only) ────────────────────────────────────────
+
+    [HttpPost("dev-login")]
+    public async Task<ActionResult<DevLoginResponse>> DevLogin([FromBody] DevLoginRequest request)
+    {
+        if (!env.IsDevelopment())
+            return NotFound();
+
+        var user = await authService.FindOrCreateUserAsync(
+            provider: "dev",
+            providerId: request.Email,
+            name: request.Name,
+            email: request.Email,
+            avatarUrl: null
+        );
+
+        return Ok(new DevLoginResponse(tokenService.GenerateToken(user)));
+    }
 
     // ─── GitHub ──────────────────────────────────────────────────────────────
 
@@ -88,7 +104,7 @@ public class AuthController(
             ? emailProp.GetString()!
             : await GetGithubPrimaryEmail(http);
 
-        var user = await FindOrCreateUser(
+        var user = await authService.FindOrCreateUserAsync(
             provider: "github",
             providerId: profile.GetProperty("id").GetInt64().ToString(),
             name: profile.TryGetProperty("name", out var nameProp) && nameProp.ValueKind != JsonValueKind.Null
@@ -161,7 +177,7 @@ public class AuthController(
         var userResponse = await http.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo");
         var profile = await userResponse.Content.ReadFromJsonAsync<JsonElement>();
 
-        var user = await FindOrCreateUser(
+        var user = await authService.FindOrCreateUserAsync(
             provider: "google",
             providerId: profile.GetProperty("id").GetString()!,
             name: profile.GetProperty("name").GetString()!,
@@ -227,14 +243,14 @@ public class AuthController(
         var profile = await profileResponse.Content.ReadFromJsonAsync<JsonElement>();
 
         string? avatarUrl = null;
-        if (profile.TryGetProperty("picture", out var pic) &&
-            pic.TryGetProperty("data", out var picData) &&
+        if (profile.TryGetProperty("picture", out var pic2) &&
+            pic2.TryGetProperty("data", out var picData) &&
             picData.TryGetProperty("url", out var picUrl))
         {
             avatarUrl = picUrl.GetString();
         }
 
-        var user = await FindOrCreateUser(
+        var user = await authService.FindOrCreateUserAsync(
             provider: "facebook",
             providerId: profile.GetProperty("id").GetString()!,
             name: profile.GetProperty("name").GetString()!,
@@ -251,8 +267,7 @@ public class AuthController(
     [Authorize]
     public async Task<ActionResult<UserResponse>> GetCurrentUser()
     {
-        var userId = GetCurrentUserId();
-        var user = await db.Users.FindAsync(userId);
+        var user = await authService.GetUserByIdAsync(GetCurrentUserId());
         if (user is null) return NotFound();
 
         return Ok(new UserResponse(user.Id, user.Email, user.Name, user.AvatarUrl, user.Provider, user.CreatedAt));
@@ -260,36 +275,7 @@ public class AuthController(
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private async Task<User> FindOrCreateUser(string provider, string providerId, string name, string email, string? avatarUrl)
-    {
-        var user = await db.Users
-            .FirstOrDefaultAsync(u => u.Provider == provider && u.ProviderId == providerId);
-
-        if (user is null)
-        {
-            user = new User
-            {
-                Provider = provider,
-                ProviderId = providerId,
-                Email = email,
-                Name = name,
-                AvatarUrl = avatarUrl,
-            };
-            db.Users.Add(user);
-        }
-        else
-        {
-            // Update profile info on each login
-            user.Name = name;
-            user.Email = email;
-            user.AvatarUrl = avatarUrl;
-        }
-
-        await db.SaveChangesAsync();
-        return user;
-    }
-
-    private IActionResult RedirectToFrontend(User user)
+    private IActionResult RedirectToFrontend(PomodoroApi.Models.User user)
     {
         var token = tokenService.GenerateToken(user);
         var frontendUrl = configuration["Frontend:Url"] ?? "http://localhost:3000";

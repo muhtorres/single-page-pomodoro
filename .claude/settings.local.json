@@ -11,7 +11,10 @@
       "Bash(curl:*)",
       "Bash(npm audit:*)",
       "Bash(npm ls:*)",
-      "Bash(npm outdated:*)"
+      "Bash(npm outdated:*)",
+      "Bash(npx tsc:*)",
+      "Bash(dotnet build:*)",
+      "Bash(git add:*)"
     ]
   }
 }

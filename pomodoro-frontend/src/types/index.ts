@@ -1,6 +1,29 @@
 // Timer modes
 export type TimerMode = 'pomodoro' | 'shortBreak' | 'longBreak'
 
+// Project entity
+export interface Project {
+  id: string
+  name: string
+  color: string
+  isDefault: boolean
+  createdAt: number
+}
+
+// Predefined project color palette
+export const PROJECT_COLORS: { value: string; label: string }[] = [
+  { value: '#EF4444', label: 'Red' },
+  { value: '#F97316', label: 'Orange' },
+  { value: '#EAB308', label: 'Yellow' },
+  { value: '#22C55E', label: 'Green' },
+  { value: '#14B8A6', label: 'Teal' },
+  { value: '#3B82F6', label: 'Blue' },
+  { value: '#6366F1', label: 'Indigo' },
+  { value: '#A855F7', label: 'Purple' },
+  { value: '#EC4899', label: 'Pink' },
+  { value: '#78716C', label: 'Stone' },
+]
+
 // Task entity
 export interface Task {
   id: string
@@ -9,6 +32,7 @@ export interface Task {
   estimatedPomodoros: number
   actualPomodoros: number
   createdAt: number
+  projectId: string | null
 }
 
 // Authenticated user

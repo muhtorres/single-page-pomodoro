@@ -1,25 +1,38 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useTaskStore } from '@/store/taskStore'
+import { useProjectStore } from '@/store/projectStore'
 
 export function AddTask() {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [estimate, setEstimate] = useState(1)
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
   const inputRef = useRef<HTMLInputElement>(null)
   const addTask = useTaskStore((s) => s.addTask)
+  const { projects, selectedProjectId: filterProjectId } = useProjectStore()
 
   const handleOpen = () => {
+    // Pre-select current filter project if one is active
+    setSelectedProjectId(filterProjectId ?? '')
     setOpen(true)
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
+  const effectiveProjectId = selectedProjectId || null
+  // Submit is disabled if no project is selected and there's no filter project active
+  const canSubmit = title.trim().length > 0 && (filterProjectId !== null || selectedProjectId !== '')
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
-    addTask(title.trim(), estimate)
+    if (!title.trim() || !canSubmit) return
+
+    // Use the selected project from the form, falling back to filter project
+    const projectId = selectedProjectId || filterProjectId || null
+    addTask(title.trim(), estimate, projectId)
     setTitle('')
     setEstimate(1)
+    setSelectedProjectId(filterProjectId ?? '')
     setOpen(false)
   }
 
@@ -27,6 +40,7 @@ export function AddTask() {
     setOpen(false)
     setTitle('')
     setEstimate(1)
+    setSelectedProjectId('')
   }
 
   if (!open) {
@@ -61,6 +75,62 @@ export function AddTask() {
         maxLength={120}
         data-testid="task-title-input"
       />
+
+      {/* Project selector */}
+      <div className="flex items-center gap-2 text-sm text-white/70">
+        <span className="flex-shrink-0">Project:</span>
+        {filterProjectId !== null ? (
+          /* A filter is active — show it as pre-selected (but still allow changing) */
+          <div className="flex-1">
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-white text-sm
+                         focus:outline-none focus:border-white/60 appearance-none cursor-pointer"
+              data-testid="task-project-select"
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id} style={{ backgroundColor: '#1f2937' }}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          /* No filter — user must pick a project */
+          <div className="flex-1">
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm
+                         focus:outline-none focus:border-white/60 appearance-none cursor-pointer
+                         text-white"
+              data-testid="task-project-select"
+            >
+              <option value="" style={{ backgroundColor: '#1f2937', color: '#9ca3af' }}>
+                Select a project...
+              </option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id} style={{ backgroundColor: '#1f2937' }}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {/* Colored indicator for selected project */}
+        {effectiveProjectId && (() => {
+          const proj = projects.find((p) => p.id === (selectedProjectId || filterProjectId))
+          return proj ? (
+            <span
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: proj.color }}
+              aria-hidden="true"
+            />
+          ) : null
+        })()}
+      </div>
+
       <div className="flex items-center gap-2 text-sm text-white/70">
         <span>Est. Pomodoros:</span>
         <button
@@ -83,6 +153,7 @@ export function AddTask() {
           +
         </button>
       </div>
+
       <div className="flex gap-2 justify-end pt-1">
         <button
           type="button"
@@ -94,7 +165,7 @@ export function AddTask() {
         </button>
         <button
           type="submit"
-          disabled={!title.trim()}
+          disabled={!canSubmit}
           className="px-4 py-2 bg-white text-gray-800 font-medium rounded-lg
                      hover:bg-white/90 transition-colors text-sm disabled:opacity-50
                      disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2

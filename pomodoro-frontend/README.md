@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open <http://localhost:3000>.
 
 ### Environment variables
 
@@ -35,7 +35,7 @@ Copy `.env.local.example` to `.env.local` and fill in:
 
 ```bash
 # URL of the .NET API backend
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:5175
 ```
 
 ## Project Structure

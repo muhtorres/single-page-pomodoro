@@ -12,4 +12,5 @@ public class User
 
     public ICollection<TaskItem> Tasks { get; set; } = [];
     public ICollection<PomodoroSession> Sessions { get; set; } = [];
+    public ICollection<Project> Projects { get; set; } = [];
 }
