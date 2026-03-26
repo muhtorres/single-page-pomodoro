@@ -1,12 +1,21 @@
 'use client'
 import { useTaskStore } from '@/store/taskStore'
+import { useProjectStore } from '@/store/projectStore'
 import { TaskItem } from './TaskItem'
 import { AddTask } from './AddTask'
+import { ProjectDropdown } from '@/components/Projects/ProjectDropdown'
 
 export function TaskList() {
   const { tasks, selectedTaskId, clearCompleted } = useTaskStore()
-  const active = tasks.filter((t) => !t.completed)
-  const done = tasks.filter((t) => t.completed)
+  const { selectedProjectId } = useProjectStore()
+
+  const filterByProject = (list: typeof tasks) => {
+    if (selectedProjectId === null) return list
+    return list.filter((t) => t.projectId === selectedProjectId)
+  }
+
+  const active = filterByProject(tasks.filter((t) => !t.completed))
+  const done = filterByProject(tasks.filter((t) => t.completed))
 
   return (
     <section className="w-full max-w-lg mt-12 pb-16" aria-label="Task list">
@@ -19,6 +28,9 @@ export function TaskList() {
             </span>
           )}
         </div>
+
+        {/* Project filter dropdown */}
+        <ProjectDropdown />
 
         {/* Active tasks */}
         <div className="space-y-2" role="listbox" aria-label="Active tasks">

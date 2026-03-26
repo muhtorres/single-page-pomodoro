@@ -4,14 +4,16 @@ namespace PomodoroApi.DTOs;
 
 public record CreateTaskRequest(
     [Required, MaxLength(500)] string Title,
-    int EstimatedPomodoros = 1
+    int EstimatedPomodoros = 1,
+    Guid? ProjectId = null
 );
 
 public record UpdateTaskRequest(
     [MaxLength(500)] string? Title,
     int? EstimatedPomodoros,
     int? ActualPomodoros,
-    bool? IsCompleted
+    bool? IsCompleted,
+    Guid? ProjectId = null
 );
 
 public record TaskResponse(
@@ -21,5 +23,6 @@ public record TaskResponse(
     int EstimatedPomodoros,
     int ActualPomodoros,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    Guid? ProjectId
 );

@@ -57,6 +57,41 @@ namespace PomodoroApi.Data.Migrations
                     b.ToTable("Sessions");
                 });
 
+            modelBuilder.Entity("PomodoroApi.Models.Project", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Projects");
+                });
+
             modelBuilder.Entity("PomodoroApi.Models.TaskItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -75,6 +110,9 @@ namespace PomodoroApi.Data.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -87,6 +125,8 @@ namespace PomodoroApi.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
 
                     b.HasIndex("UserId");
 
@@ -151,10 +191,10 @@ namespace PomodoroApi.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PomodoroApi.Models.TaskItem", b =>
+            modelBuilder.Entity("PomodoroApi.Models.Project", b =>
                 {
                     b.HasOne("PomodoroApi.Models.User", "User")
-                        .WithMany("Tasks")
+                        .WithMany("Projects")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -164,11 +204,36 @@ namespace PomodoroApi.Data.Migrations
 
             modelBuilder.Entity("PomodoroApi.Models.TaskItem", b =>
                 {
+                    b.HasOne("PomodoroApi.Models.Project", "Project")
+                        .WithMany("Tasks")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("PomodoroApi.Models.User", "User")
+                        .WithMany("Tasks")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PomodoroApi.Models.Project", b =>
+                {
+                    b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("PomodoroApi.Models.TaskItem", b =>
+                {
                     b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("PomodoroApi.Models.User", b =>
                 {
+                    b.Navigation("Projects");
+
                     b.Navigation("Sessions");
 
                     b.Navigation("Tasks");

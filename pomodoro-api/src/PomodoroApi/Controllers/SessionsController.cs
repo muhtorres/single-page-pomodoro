@@ -1,43 +1,23 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PomodoroApi.Data;
 using PomodoroApi.DTOs;
 using PomodoroApi.Models;
+using PomodoroApi.Services;
 
 namespace PomodoroApi.Controllers;
 
 [ApiController]
 [Route("api/sessions")]
 [Authorize]
-public class SessionsController(AppDbContext db) : ControllerBase
+public class SessionsController(ISessionService sessionService) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<SessionResponse>> CreateSession([FromBody] CreateSessionRequest request)
     {
-        var userId = GetCurrentUserId();
-
-        // Validate that the task belongs to this user (if provided)
-        if (request.TaskId.HasValue)
-        {
-            var taskExists = await db.Tasks.AnyAsync(t => t.Id == request.TaskId.Value && t.UserId == userId);
-            if (!taskExists) return BadRequest("Task not found or does not belong to this user.");
-        }
-
-        var session = new PomodoroSession
-        {
-            UserId = userId,
-            TaskId = request.TaskId,
-            Mode = request.Mode,
-            DurationMinutes = request.DurationMinutes,
-            WasCompleted = request.WasCompleted,
-        };
-
-        db.Sessions.Add(session);
-        await db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(CreateSession), ToResponse(session));
+        var (session, error) = await sessionService.CreateSessionAsync(GetCurrentUserId(), request);
+        if (error is not null) return BadRequest(error);
+        return CreatedAtAction(nameof(CreateSession), ToResponse(session!));
     }
 
     private Guid GetCurrentUserId()

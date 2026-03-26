@@ -2,12 +2,13 @@ import { useAuthStore } from '@/store/authStore'
 
 interface HeaderProps {
   onSettingsClick: () => void
+  onProjectsClick: () => void
   sessionCount: number
   panelOpen: boolean
   setPanelOpen: (open: boolean) => void
 }
 
-export function Header({ onSettingsClick, sessionCount, panelOpen, setPanelOpen }: HeaderProps) {
+export function Header({ onSettingsClick, onProjectsClick, sessionCount, panelOpen, setPanelOpen }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuthStore()
 
   return (
@@ -68,6 +69,31 @@ export function Header({ onSettingsClick, sessionCount, panelOpen, setPanelOpen 
             <span className="text-white font-bold text-sm">{sessionCount}</span>
           </div>
         )}
+
+        {/* Projects button */}
+        <button
+          onClick={onProjectsClick}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          aria-label="Manage projects"
+          title="Projects"
+          data-testid="projects-button"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
 
         {/* Settings button */}
         <button

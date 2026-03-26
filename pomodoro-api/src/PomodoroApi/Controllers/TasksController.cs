@@ -1,91 +1,51 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PomodoroApi.Data;
 using PomodoroApi.DTOs;
 using PomodoroApi.Models;
+using PomodoroApi.Services;
 
 namespace PomodoroApi.Controllers;
 
 [ApiController]
 [Route("api/tasks")]
 [Authorize]
-public class TasksController(AppDbContext db) : ControllerBase
+public class TasksController(ITaskService taskService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<TaskResponse>>> GetTasks()
     {
-        var userId = GetCurrentUserId();
-
-        var tasks = await db.Tasks
-            .Where(t => t.UserId == userId)
-            .OrderBy(t => t.CreatedAt)
-            .Select(t => ToResponse(t))
-            .ToListAsync();
-
-        return Ok(tasks);
+        var tasks = await taskService.GetTasksAsync(GetCurrentUserId());
+        return Ok(tasks.Select(ToResponse).ToList());
     }
 
     [HttpPost]
     public async Task<ActionResult<TaskResponse>> CreateTask([FromBody] CreateTaskRequest request)
     {
-        var userId = GetCurrentUserId();
-
-        var task = new TaskItem
-        {
-            UserId = userId,
-            Title = request.Title.Trim(),
-            EstimatedPomodoros = Math.Clamp(request.EstimatedPomodoros, 1, 20),
-        };
-
-        db.Tasks.Add(task);
-        await db.SaveChangesAsync();
-
+        var task = await taskService.CreateTaskAsync(GetCurrentUserId(), request);
         return CreatedAtAction(nameof(GetTasks), ToResponse(task));
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TaskResponse>> UpdateTask(Guid id, [FromBody] UpdateTaskRequest request)
     {
-        var userId = GetCurrentUserId();
-        var task = await db.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
-
+        var task = await taskService.UpdateTaskAsync(GetCurrentUserId(), id, request);
         if (task is null) return NotFound();
-
-        if (request.Title is not null) task.Title = request.Title.Trim();
-        if (request.EstimatedPomodoros.HasValue) task.EstimatedPomodoros = Math.Clamp(request.EstimatedPomodoros.Value, 1, 20);
-        if (request.ActualPomodoros.HasValue) task.ActualPomodoros = Math.Max(0, request.ActualPomodoros.Value);
-        if (request.IsCompleted.HasValue) task.IsCompleted = request.IsCompleted.Value;
-        task.UpdatedAt = DateTime.UtcNow;
-
-        await db.SaveChangesAsync();
         return Ok(ToResponse(task));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteTask(Guid id)
     {
-        var userId = GetCurrentUserId();
-        var task = await db.Tasks.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
-
-        if (task is null) return NotFound();
-
-        db.Tasks.Remove(task);
-        await db.SaveChangesAsync();
-
+        var deleted = await taskService.DeleteTaskAsync(GetCurrentUserId(), id);
+        if (!deleted) return NotFound();
         return NoContent();
     }
 
     [HttpDelete("completed")]
     public async Task<IActionResult> ClearCompleted()
     {
-        var userId = GetCurrentUserId();
-
-        await db.Tasks
-            .Where(t => t.UserId == userId && t.IsCompleted)
-            .ExecuteDeleteAsync();
-
+        await taskService.ClearCompletedAsync(GetCurrentUserId());
         return NoContent();
     }
 
@@ -98,6 +58,6 @@ public class TasksController(AppDbContext db) : ControllerBase
     }
 
     private static TaskResponse ToResponse(TaskItem t) => new(
-        t.Id, t.Title, t.IsCompleted, t.EstimatedPomodoros, t.ActualPomodoros, t.CreatedAt, t.UpdatedAt
+        t.Id, t.Title, t.IsCompleted, t.EstimatedPomodoros, t.ActualPomodoros, t.CreatedAt, t.UpdatedAt, t.ProjectId
     );
 }

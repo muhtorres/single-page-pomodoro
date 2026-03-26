@@ -27,4 +27,5 @@ export function removeItem(key: string): void {
 export const STORAGE_KEYS = {
   SETTINGS: 'pomodoro_settings',
   TASKS: 'pomodoro_tasks',
+  PROJECTS: 'pomodoro_projects',
 } as const

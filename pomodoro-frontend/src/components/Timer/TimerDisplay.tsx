@@ -2,8 +2,9 @@
 import { useState } from 'react'
 import { CircularProgress } from './CircularProgress'
 import { useTaskStore } from '@/store/taskStore'
+import { useProjectStore } from '@/store/projectStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { TimerMode, MODE_LABELS, Task } from '@/types'
+import { TimerMode, MODE_LABELS } from '@/types'
 
 interface TimerDisplayProps {
   secondsLeft: number
@@ -13,6 +14,7 @@ interface TimerDisplayProps {
 export function TimerDisplay({ secondsLeft, mode }: TimerDisplayProps) {
   const { settings } = useSettingsStore()
   const { tasks, selectedTaskId, selectTask } = useTaskStore()
+  const { projects, selectedProjectId } = useProjectStore()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const selectedTask = tasks.find((t) => t.id === selectedTaskId)
 
@@ -32,11 +34,13 @@ export function TimerDisplay({ secondsLeft, mode }: TimerDisplayProps) {
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
   const ss = String(secondsLeft % 60).padStart(2, '0')
 
-  const activeTasks = tasks.filter((t) => !t.completed)
+  const activeTasks = tasks.filter((t) => {
+    if (t.completed) return false
+    if (selectedProjectId) return t.projectId === selectedProjectId
+    return true
+  })
 
-  const dropdownTasks = activeTasks.length === 0
-    ? [{ id: 'no-task' as string, title: 'Select a task to start' } as Task]
-    : activeTasks
+  const dropdownTasks = activeTasks
 
   return (
     <div
@@ -105,27 +109,43 @@ export function TimerDisplay({ secondsLeft, mode }: TimerDisplayProps) {
           {/* Dropdown menu */}
           {isDropdownOpen && (
             <div
-              className="absolute top-full mt-2 w-64 bg-white/15 backdrop-blur-sm border border-white/20 rounded-xl
+              className="absolute top-full mt-2 w-72 bg-gray-800/95 backdrop-blur-sm border border-white/20 rounded-xl
                          shadow-xl z-50 max-h-64 overflow-auto"
               role="listbox"
             >
-              {dropdownTasks.map((task) => (
-                <button
-                  key={task.id}
-                  onClick={() => handleSelectTask(task.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-white/20 transition-colors
-                             ${task.id === selectedTaskId ? 'bg-white/20 text-white' : 'text-white/80'}`}
-                  role="option"
-                  aria-selected={task.id === selectedTaskId}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{task.title}</span>
-                    <span className="text-xs text-white/50 font-mono">
-                      {task.actualPomodoros}/{task.estimatedPomodoros}
-                    </span>
-                  </div>
-                </button>
-              ))}
+              {dropdownTasks.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-white/50 text-center">
+                  No tasks for this project
+                </p>
+              ) : (
+                dropdownTasks.map((task) => {
+                  const project = projects.find((p) => p.id === task.projectId)
+                  return (
+                    <button
+                      key={task.id}
+                      onClick={() => handleSelectTask(task.id)}
+                      className={`w-full text-left px-4 py-3 hover:bg-white/10 transition-colors first:rounded-t-xl last:rounded-b-xl
+                                 ${task.id === selectedTaskId ? 'bg-white/15' : ''}`}
+                      role="option"
+                      aria-selected={task.id === selectedTaskId}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="flex-shrink-0 w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: project?.color ?? '#ffffff40' }}
+                          aria-hidden="true"
+                        />
+                        <span className="flex-1 text-sm font-medium text-white truncate">
+                          {task.title}
+                        </span>
+                        <span className="flex-shrink-0 text-xs text-white/60 font-mono">
+                          {task.actualPomodoros}/{task.estimatedPomodoros}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })
+              )}
             </div>
           )}
         </div>

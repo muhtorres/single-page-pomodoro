@@ -4,10 +4,24 @@ import { TaskList } from '@/components/Tasks/TaskList'
 import { AddTask } from '@/components/Tasks/AddTask'
 import { TaskItem } from '@/components/Tasks/TaskItem'
 import { useTaskStore } from '@/store/taskStore'
-import { Task } from '@/types'
+import { useProjectStore } from '@/store/projectStore'
+import { Task, Project } from '@/types'
+
+const DEFAULT_PROJECT: Project = {
+  id: 'default-project-id',
+  name: 'Default',
+  color: '#3B82F6',
+  isDefault: true,
+  createdAt: Date.now(),
+}
 
 beforeEach(() => {
   useTaskStore.setState({ tasks: [], selectedTaskId: null })
+  // Projects available but no active filter by default
+  useProjectStore.setState({
+    projects: [DEFAULT_PROJECT],
+    selectedProjectId: null,
+  })
 })
 
 // Helper to create a mock task
@@ -18,6 +32,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   estimatedPomodoros: 2,
   actualPomodoros: 0,
   createdAt: Date.now(),
+  projectId: null,
   ...overrides,
 })
 
@@ -62,6 +77,14 @@ describe('TaskList', () => {
 })
 
 describe('AddTask', () => {
+  beforeEach(() => {
+    // When a project filter is active, the submit button is enabled without manual project selection
+    useProjectStore.setState({
+      projects: [DEFAULT_PROJECT],
+      selectedProjectId: DEFAULT_PROJECT.id,
+    })
+  })
+
   it('renders the add task button initially', () => {
     render(<AddTask />)
     expect(screen.getByTestId('add-task-button')).toBeInTheDocument()
@@ -96,7 +119,7 @@ describe('AddTask', () => {
     const user = userEvent.setup()
     render(<AddTask />)
     await user.click(screen.getByTestId('add-task-button'))
-    // Submit button should be disabled
+    // Submit button should be disabled (no title)
     expect(screen.getByTestId('submit-task-button')).toBeDisabled()
   })
 
@@ -120,6 +143,20 @@ describe('AddTask', () => {
     await waitFor(() => {
       expect(screen.getByTestId('add-task-button')).toBeInTheDocument()
     })
+  })
+
+  it('disables submit when no project selected and no filter active', async () => {
+    // Override to have no active filter
+    useProjectStore.setState({
+      projects: [DEFAULT_PROJECT],
+      selectedProjectId: null,
+    })
+    const user = userEvent.setup()
+    render(<AddTask />)
+    await user.click(screen.getByTestId('add-task-button'))
+    await user.type(screen.getByTestId('task-title-input'), 'Some task')
+    // Submit should still be disabled — no project selected
+    expect(screen.getByTestId('submit-task-button')).toBeDisabled()
   })
 })
 
@@ -196,5 +233,18 @@ describe('TaskItem', () => {
     render(<TaskItem task={task} isSelected={true} />)
     await user.click(screen.getByTestId('task-item-sel'))
     expect(useTaskStore.getState().selectedTaskId).toBeNull()
+  })
+
+  it('shows project badge when task has a project', () => {
+    const task = makeTask({ id: 'proj-task', projectId: DEFAULT_PROJECT.id })
+    render(<TaskItem task={task} isSelected={false} />)
+    expect(screen.getByLabelText('Project: Default')).toBeInTheDocument()
+    expect(screen.getByText('Default')).toBeInTheDocument()
+  })
+
+  it('does not show project badge when task has no project', () => {
+    const task = makeTask({ id: 'no-proj-task', projectId: null })
+    render(<TaskItem task={task} isSelected={false} />)
+    expect(screen.queryByLabelText(/Project:/)).not.toBeInTheDocument()
   })
 })
