@@ -14,7 +14,8 @@
       "Bash(npm outdated:*)",
       "Bash(npx tsc:*)",
       "Bash(dotnet build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(dotnet ef:*)"
     ]
   }
 }

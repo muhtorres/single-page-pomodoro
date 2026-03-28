@@ -23,6 +23,7 @@ public class TaskService(ITaskRepository taskRepository, IProjectRepository proj
         {
             UserId = userId,
             Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
             EstimatedPomodoros = Math.Clamp(request.EstimatedPomodoros, 1, 20),
             ProjectId = projectId,
         };
@@ -36,9 +37,15 @@ public class TaskService(ITaskRepository taskRepository, IProjectRepository proj
         if (task is null) return null;
 
         if (request.Title is not null) task.Title = request.Title.Trim();
+        if (request.Description is not null) task.Description = request.Description.Trim();
         if (request.EstimatedPomodoros.HasValue) task.EstimatedPomodoros = Math.Clamp(request.EstimatedPomodoros.Value, 1, 20);
         if (request.ActualPomodoros.HasValue) task.ActualPomodoros = Math.Max(0, request.ActualPomodoros.Value);
-        if (request.IsCompleted.HasValue) task.IsCompleted = request.IsCompleted.Value;
+        if (request.IsCompleted.HasValue)
+        {
+            task.IsCompleted = request.IsCompleted.Value;
+            task.CompletedAt = request.IsCompleted.Value ? DateTime.UtcNow : null;
+        }
+        if (request.CompletedAt.HasValue) task.CompletedAt = request.CompletedAt.Value;
         if (request.ProjectId.HasValue) task.ProjectId = request.ProjectId.Value;
         task.UpdatedAt = DateTime.UtcNow;
 

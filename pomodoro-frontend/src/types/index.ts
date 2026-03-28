@@ -28,7 +28,9 @@ export const PROJECT_COLORS: { value: string; label: string }[] = [
 export interface Task {
   id: string
   title: string
+  description: string | null
   completed: boolean
+  completedAt: number | null
   estimatedPomodoros: number
   actualPomodoros: number
   createdAt: number
@@ -55,6 +57,7 @@ export interface Settings {
   autoStartBreaks: boolean
   autoStartPomodoros: boolean
   volume: number
+  locale: 'pt-BR' | 'en-US'
 }
 
 // Default settings values — shared across stores, hooks, and tests
@@ -67,6 +70,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoStartBreaks: true,
   autoStartPomodoros: false,
   volume: 0.5,
+  locale: 'pt-BR',
 }
 
 // Background color per mode
@@ -82,3 +86,9 @@ export const MODE_LABELS: Record<TimerMode, string> = {
   shortBreak: 'Short Break',
   longBreak: 'Long Break',
 }
+
+// Locale configuration
+export const LOCALES: { value: 'pt-BR' | 'en-US'; label: string }[] = [
+  { value: 'pt-BR', label: 'Português (Brasil)' },
+  { value: 'en-US', label: 'English (US)' },
+]

@@ -6,7 +6,9 @@ public class TaskItem
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public bool IsCompleted { get; set; }
+    public DateTime? CompletedAt { get; set; }
     public int EstimatedPomodoros { get; set; } = 1;
     public int ActualPomodoros { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -58,6 +58,6 @@ public class TasksController(ITaskService taskService) : ControllerBase
     }
 
     private static TaskResponse ToResponse(TaskItem t) => new(
-        t.Id, t.Title, t.IsCompleted, t.EstimatedPomodoros, t.ActualPomodoros, t.CreatedAt, t.UpdatedAt, t.ProjectId
+        t.Id, t.Title, t.Description, t.IsCompleted, t.CompletedAt, t.EstimatedPomodoros, t.ActualPomodoros, t.CreatedAt, t.UpdatedAt, t.ProjectId
     );
 }

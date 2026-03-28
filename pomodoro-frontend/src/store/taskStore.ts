@@ -7,7 +7,7 @@ import * as api from '@/lib/api'
 interface TaskStore {
   tasks: Task[]
   selectedTaskId: string | null
-  addTask: (title: string, estimatedPomodoros?: number, projectId?: string | null) => Promise<void>
+  addTask: (title: string, estimatedPomodoros?: number, projectId?: string | null, description?: string | null) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   toggleTask: (id: string) => Promise<void>
   selectTask: (id: string | null) => void
@@ -34,9 +34,9 @@ export const useTaskStore = create<TaskStore>()(
         set({ tasks, selectedTaskId: null })
       },
 
-      addTask: async (title, estimatedPomodoros = 1, projectId = null) => {
+      addTask: async (title, estimatedPomodoros = 1, projectId = null, description = null) => {
         if (isAuthenticated()) {
-          const task = await api.createTask(title, estimatedPomodoros, projectId)
+          const task = await api.createTask(title, estimatedPomodoros, projectId, description)
           set((state) => ({ tasks: [...state.tasks, task] }))
         } else {
           set((state) => ({
@@ -45,7 +45,9 @@ export const useTaskStore = create<TaskStore>()(
               {
                 id: crypto.randomUUID(),
                 title,
+                description,
                 completed: false,
+                completedAt: null,
                 estimatedPomodoros,
                 actualPomodoros: 0,
                 createdAt: Date.now(),
@@ -72,11 +74,11 @@ export const useTaskStore = create<TaskStore>()(
 
         const newCompleted = !task.completed
         if (isAuthenticated()) {
-          await api.updateTask(id, { isCompleted: newCompleted })
+          await api.updateTask(id, { isCompleted: newCompleted, completedAt: newCompleted ? Date.now() : null })
         }
         set((state) => ({
           tasks: state.tasks.map((t) =>
-            t.id === id ? { ...t, completed: newCompleted } : t
+            t.id === id ? { ...t, completed: newCompleted, completedAt: newCompleted ? Date.now() : null } : t
           ),
         }))
       },
@@ -87,11 +89,16 @@ export const useTaskStore = create<TaskStore>()(
         if (isAuthenticated()) {
           const apiUpdates: Parameters<typeof api.updateTask>[1] = {}
           if (updates.title !== undefined) apiUpdates.title = updates.title
+          if (updates.description !== undefined) apiUpdates.description = updates.description
           if (updates.estimatedPomodoros !== undefined)
             apiUpdates.estimatedPomodoros = updates.estimatedPomodoros
           if (updates.actualPomodoros !== undefined)
             apiUpdates.actualPomodoros = updates.actualPomodoros
-          if (updates.completed !== undefined) apiUpdates.isCompleted = updates.completed
+          if (updates.completed !== undefined) {
+            apiUpdates.isCompleted = updates.completed
+            apiUpdates.completedAt = updates.completed ? Date.now() : null
+          }
+          if (updates.completedAt !== undefined) apiUpdates.completedAt = updates.completedAt
           if (updates.projectId !== undefined) apiUpdates.projectId = updates.projectId
           await api.updateTask(id, apiUpdates)
         }

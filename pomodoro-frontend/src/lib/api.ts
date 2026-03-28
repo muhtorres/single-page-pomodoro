@@ -92,7 +92,9 @@ export async function deleteProject(id: string): Promise<void> {
 export interface ApiTask {
   id: string
   title: string
+  description: string | null
   isCompleted: boolean
+  completedAt: string | null
   estimatedPomodoros: number
   actualPomodoros: number
   createdAt: string
@@ -104,7 +106,9 @@ function apiTaskToTask(t: ApiTask): Task {
   return {
     id: t.id,
     title: t.title,
+    description: t.description,
     completed: t.isCompleted,
+    completedAt: t.completedAt ? new Date(t.completedAt).getTime() : null,
     estimatedPomodoros: t.estimatedPomodoros,
     actualPomodoros: t.actualPomodoros,
     createdAt: new Date(t.createdAt).getTime(),
@@ -120,11 +124,12 @@ export async function fetchTasks(): Promise<Task[]> {
 export async function createTask(
   title: string,
   estimatedPomodoros: number,
-  projectId?: string | null
+  projectId?: string | null,
+  description?: string | null
 ): Promise<Task> {
   const apiTask = await request<ApiTask>('/api/tasks', {
     method: 'POST',
-    body: JSON.stringify({ title, estimatedPomodoros, projectId: projectId ?? null }),
+    body: JSON.stringify({ title, estimatedPomodoros, projectId: projectId ?? null, description }),
   })
   return apiTaskToTask(apiTask)
 }
@@ -133,9 +138,11 @@ export async function updateTask(
   id: string,
   updates: {
     title?: string
+    description?: string | null
     estimatedPomodoros?: number
     actualPomodoros?: number
     isCompleted?: boolean
+    completedAt?: number | string | null
     projectId?: string | null
   }
 ): Promise<Task> {

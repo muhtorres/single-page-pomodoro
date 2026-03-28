@@ -6,6 +6,7 @@ import { useProjectStore } from '@/store/projectStore'
 export function AddTask() {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [estimate, setEstimate] = useState(1)
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -29,8 +30,9 @@ export function AddTask() {
 
     // Use the selected project from the form, falling back to filter project
     const projectId = selectedProjectId || filterProjectId || null
-    addTask(title.trim(), estimate, projectId)
+    addTask(title.trim(), estimate, projectId, description.trim() || null)
     setTitle('')
+    setDescription('')
     setEstimate(1)
     setSelectedProjectId(filterProjectId ?? '')
     setOpen(false)
@@ -39,6 +41,7 @@ export function AddTask() {
   const handleCancel = () => {
     setOpen(false)
     setTitle('')
+    setDescription('')
     setEstimate(1)
     setSelectedProjectId('')
   }
@@ -74,6 +77,17 @@ export function AddTask() {
                    placeholder-white/50 focus:outline-none focus:border-white"
         maxLength={120}
         data-testid="task-title-input"
+      />
+
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Add a description (optional)..."
+        className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white
+                   placeholder-white/40 focus:outline-none focus:border-white/60 text-sm resize-none"
+        rows={3}
+        maxLength={2000}
+        data-testid="task-description-input"
       />
 
       {/* Project selector */}

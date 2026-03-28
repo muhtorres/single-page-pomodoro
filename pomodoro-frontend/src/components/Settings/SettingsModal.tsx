@@ -2,19 +2,17 @@
 import { useEffect, useRef } from 'react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useTimerStore } from '@/store/timerStore'
-import { DEFAULT_SETTINGS } from '@/types'
+import { DEFAULT_SETTINGS, LOCALES } from '@/types'
+import { useTranslations } from 'next-intl'
 
 interface SettingsModalProps {
   onClose: () => void
 }
 
-const durationFields = [
-  { label: 'Pomodoro', key: 'pomodoroDuration', min: 1, max: 60 },
-  { label: 'Short Break', key: 'shortBreakDuration', min: 1, max: 30 },
-  { label: 'Long Break', key: 'longBreakDuration', min: 1, max: 60 },
-] as const
-
 export function SettingsModal({ onClose }: SettingsModalProps) {
+  const t = useTranslations('settings')
+  const tCommon = useTranslations('common')
+
   const { settings, updateSettings, resetSettings } = useSettingsStore()
   const { setSecondsLeft, mode, isRunning } = useTimerStore()
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -61,6 +59,14 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     }
   }
 
+  const handleLocaleChange = (locale: 'pt-BR' | 'en-US') => {
+    updateSettings({ locale })
+    // Persist to localStorage directly
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pomodoro_locale', locale)
+    }
+  }
+
   return (
     <div
       ref={overlayRef}
@@ -70,7 +76,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="Settings"
+      aria-label={t('title')}
       data-testid="settings-modal"
     >
       <div
@@ -79,12 +85,12 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-900">Settings</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('title')}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300"
-            aria-label="Close settings"
+            aria-label={t('close')}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -105,38 +111,86 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         </div>
 
         <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto scrollbar-thin">
+          {/* Language */}
+          <section>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+              {t('language')}
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {LOCALES.map((loc) => (
+                <button
+                  key={loc.value}
+                  onClick={() => handleLocaleChange(loc.value as 'pt-BR' | 'en-US')}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all
+                              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400
+                              ${settings.locale === loc.value
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                  data-testid={`locale-${loc.value}`}
+                >
+                  {loc.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Timer Durations */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Time (minutes)
+              {t('sections.time')}
             </h3>
             <div className="grid grid-cols-3 gap-3">
-              {durationFields.map(({ label, key, min, max }, i) => (
-                <label key={key} className="flex flex-col gap-1.5">
-                  <span className="text-xs text-gray-500 font-medium">{label}</span>
-                  <input
-                    ref={i === 0 ? firstFocusRef : undefined}
-                    type="number"
-                    min={min}
-                    max={max}
-                    value={settings[key]}
-                    onChange={(e) => handleDurationChange(key, Number(e.target.value))}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-center text-sm
-                               focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
-                    data-testid={`setting-${key}`}
-                  />
-                </label>
-              ))}
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">{t('fields.pomodoro')}</span>
+                <input
+                  ref={firstFocusRef}
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={settings.pomodoroDuration}
+                  onChange={(e) => handleDurationChange('pomodoroDuration', Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-center text-sm
+                             focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                  data-testid="setting-pomodoroDuration"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">{t('fields.shortBreak')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={settings.shortBreakDuration}
+                  onChange={(e) => handleDurationChange('shortBreakDuration', Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-center text-sm
+                             focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                  data-testid="setting-shortBreakDuration"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-gray-500 font-medium">{t('fields.longBreak')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={settings.longBreakDuration}
+                  onChange={(e) => handleDurationChange('longBreakDuration', Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-center text-sm
+                             focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                  data-testid="setting-longBreakDuration"
+                />
+              </label>
             </div>
           </section>
 
           {/* Long break interval */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Long Break Interval
+              {t('sections.longBreakInterval')}
             </h3>
             <label className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">Long break after (pomodoros)</span>
+              <span className="text-sm text-gray-700">{t('fields.longBreakAfter')}</span>
               <input
                 type="number"
                 min={2}
@@ -153,11 +207,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {/* Sound */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Sound
+              {t('sections.sound')}
             </h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-700">Enable sound notifications</span>
+                <span className="text-sm text-gray-700">{t('fields.soundEnabled')}</span>
                 <div className="relative">
                   <input
                     type="checkbox"
@@ -175,7 +229,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
               {settings.soundEnabled && (
                 <label className="flex items-center gap-3">
-                  <span className="text-sm text-gray-600 w-16 shrink-0">Volume</span>
+                  <span className="text-sm text-gray-600 w-16 shrink-0">{t('fields.volume')}</span>
                   <input
                     type="range"
                     min={0}
@@ -197,11 +251,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {/* Auto Start */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Auto Start
+              {t('sections.autoStart')}
             </h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-700">Auto-start breaks</span>
+                <span className="text-sm text-gray-700">{t('fields.autoStartBreaks')}</span>
                 <div className="relative">
                   <input
                     type="checkbox"
@@ -218,7 +272,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-gray-700">Auto-start pomodoros</span>
+                <span className="text-sm text-gray-700">{t('fields.autoStartPomodoros')}</span>
                 <div className="relative">
                   <input
                     type="checkbox"
@@ -246,7 +300,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300"
             data-testid="settings-reset"
           >
-            Reset to defaults
+            {t('reset')}
           </button>
           <button
             onClick={onClose}
@@ -255,7 +309,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
             data-testid="settings-save"
           >
-            Save & Close
+            {t('saveAndClose')}
           </button>
         </div>
       </div>

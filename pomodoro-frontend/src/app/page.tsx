@@ -14,6 +14,7 @@ import { useNotification } from '@/hooks/useNotification'
 import { useAuthStore } from '@/store/authStore'
 import { useProjectStore } from '@/store/projectStore'
 import { MODE_COLORS, MODE_LABELS, TimerMode } from '@/types'
+import { useTranslations } from 'next-intl'
 
 const MODES: { key: TimerMode; label: string }[] = [
   { key: 'pomodoro', label: 'Pomodoro' },
@@ -22,6 +23,9 @@ const MODES: { key: TimerMode; label: string }[] = [
 ]
 
 export default function HomePage() {
+  const t = useTranslations('timer')
+  const tCommon = useTranslations('common')
+
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [taskPanelOpen, setTaskPanelOpen] = useState(false)
@@ -100,7 +104,7 @@ export default function HomePage() {
             aria-label="Timer mode"
             role="tablist"
           >
-            {MODES.map(({ key, label }) => (
+            {MODES.map(({ key, label }, index) => (
               <button
                 key={key}
                 role="tab"
@@ -109,10 +113,10 @@ export default function HomePage() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50
                             ${mode === key ? 'bg-white/25 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
-                title={`Switch to ${label} (press ${MODES.findIndex((m) => m.key === key) + 1})`}
+                title={t('switchMode', { mode: label, key: index + 1 })}
                 data-testid={`mode-tab-${key}`}
               >
-                {label}
+                {t(`modeTabs.${key}`)}
               </button>
             ))}
           </nav>
@@ -124,15 +128,15 @@ export default function HomePage() {
           {/* Keyboard hint */}
           {!isRunning && secondsLeft > 0 && (
             <p className="mt-4 text-white/30 text-xs">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono">Space</kbd> to start
+              {t('keyboardHint', { key: 'Space' })}
             </p>
           )}
 
           {/* Current mode label */}
           <p className="mt-2 text-white/50 text-xs text-center max-w-xs">
             {mode === 'pomodoro'
-              ? 'Time to focus! Select a task to work on.'
-              : `${MODE_LABELS[mode]} — take a moment to rest.`}
+              ? t('modeLabel.pomodoro')
+              : t('modeLabel.break', { mode: MODE_LABELS[mode] })}
           </p>
         </div>
 

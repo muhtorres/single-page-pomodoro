@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Task } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { useProjectStore } from '@/store/projectStore'
@@ -15,7 +15,19 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isViewing, setIsViewing] = useState(false)
   const [editTitle, setEditTitle] = useState(task.title)
+  const [editDescription, setEditDescription] = useState(task.description ?? '')
   const [editEstimate, setEditEstimate] = useState(task.estimatedPomodoros)
+  const [editProjectId, setEditProjectId] = useState<string>(task.projectId ?? '')
+
+  // Sync edit state with task changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditTitle(task.title)
+      setEditDescription(task.description ?? '')
+      setEditEstimate(task.estimatedPomodoros)
+      setEditProjectId(task.projectId ?? '')
+    }
+  }, [task, isEditing])
 
   const project = task.projectId ? projects.find((p) => p.id === task.projectId) : null
 
@@ -25,25 +37,26 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
 
   const handleSave = () => {
     if (editTitle.trim() && editEstimate >= 1) {
-      updateTask(task.id, { title: editTitle.trim(), estimatedPomodoros: editEstimate })
+      updateTask(task.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || null,
+        estimatedPomodoros: editEstimate,
+        projectId: editProjectId || null,
+      })
       setIsEditing(false)
       setEditTitle(task.title)
+      setEditDescription(task.description ?? '')
       setEditEstimate(task.estimatedPomodoros)
+      setEditProjectId(task.projectId ?? '')
     }
   }
 
   const handleCancel = () => {
     setIsEditing(false)
     setEditTitle(task.title)
+    setEditDescription(task.description ?? '')
     setEditEstimate(task.estimatedPomodoros)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSave()
-    } else if (e.key === 'Escape') {
-      handleCancel()
-    }
+    setEditProjectId(task.projectId ?? '')
   }
 
   const progress = task.estimatedPomodoros > 0 ? task.actualPomodoros / task.estimatedPomodoros : 0
@@ -83,72 +96,41 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
         )}
       </button>
 
-      {/* Task title + project badge */}
-      {isEditing ? (
-        <div className="flex-1 flex items-center gap-2">
-          <input
-            type="text"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Task title"
-            className="flex-1 bg-white/20 border-2 border-white/40 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-white transition-colors"
-            autoFocus
-          />
-        </div>
-      ) : (
-        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-          <span
-            className={`text-white text-sm leading-snug truncate ${task.completed ? 'line-through opacity-50' : ''}`}
-          >
-            {task.title}
-          </span>
-          {project && (
-            <span className="flex items-center gap-1" aria-label={`Project: ${project.name}`}>
-              <span
-                className="text-xs"
-                style={{ color: project.color }}
-                aria-hidden="true"
-              >
-                ●
-              </span>
-              <span className="text-white/50 text-xs truncate">{project.name}</span>
+      {/* Task title + project badge - clickable to view details */}
+      <div
+        className="flex-1 min-w-0 flex flex-col gap-0.5 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsViewing(true)
+        }}
+      >
+        <span
+          className={`text-white text-sm leading-snug truncate ${task.completed ? 'line-through opacity-50' : ''}`}
+          title={task.title}
+        >
+          {task.title}
+        </span>
+        {project && (
+          <span className="flex items-center gap-1" aria-label={`Project: ${project.name}`}>
+            <span
+              className="text-xs"
+              style={{ color: project.color }}
+              aria-hidden="true"
+            >
+              ●
             </span>
-          )}
-        </div>
-      )}
+            <span className="text-white/50 text-xs truncate">{project.name}</span>
+          </span>
+        )}
+      </div>
 
       {/* Estimated pomodoros */}
-      {isEditing ? (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setEditEstimate((v) => Math.max(1, v - 1))}
-            className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 transition-colors
-                       flex items-center justify-center text-white font-bold text-sm"
-            aria-label="Decrease estimate"
-          >
-            −
-          </button>
-          <span className="w-8 text-center text-white font-medium text-sm">{editEstimate}</span>
-          <button
-            type="button"
-            onClick={() => setEditEstimate((v) => Math.min(20, v + 1))}
-            className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 transition-colors
-                       flex items-center justify-center text-white font-bold text-sm"
-            aria-label="Increase estimate"
-          >
-            +
-          </button>
-        </div>
-      ) : (
-        <span className="text-white/50 text-xs whitespace-nowrap font-mono">
-          {task.actualPomodoros}/{task.estimatedPomodoros}
-        </span>
-      )}
+      <span className="text-white/50 text-xs whitespace-nowrap font-mono">
+        {task.actualPomodoros}/{task.estimatedPomodoros}
+      </span>
 
       {/* Progress bar (small) */}
-      {!isEditing && task.estimatedPomodoros > 0 && (
+      {task.estimatedPomodoros > 0 && (
         <div className="flex-1" aria-hidden="true">
           <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <div
@@ -157,36 +139,6 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
             />
           </div>
         </div>
-      )}
-
-      {/* View details button */}
-      {!isEditing && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            setIsViewing(true)
-          }}
-          className="opacity-0 group-hover:opacity-100 text-white/50 hover:text-white
-                     transition-all p-1 rounded focus-visible:opacity-100
-                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          aria-label="View task details"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
       )}
 
       {/* Edit button */}
@@ -217,27 +169,7 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
         </svg>
       </button>
 
-      {/* Save/Cancel buttons (when editing) */}
-      {isEditing && (
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors
-                       text-white text-xs focus-visible:outline-none focus-visible:ring-2
-                       focus-visible:ring-white/50"
-          >
-            Save
-          </button>
-          <button
-            onClick={handleCancel}
-            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors
-                       text-white/70 text-xs focus-visible:outline-none focus-visible:ring-2
-                       focus-visible:ring-white/50"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
+      {/* Save/Cancel buttons removed - now in modal footer */}
 
       {/* Delete button */}
       <button
@@ -270,28 +202,38 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
         </svg>
       </button>
 
-      {/* Task detail modal */}
-      {isViewing && (
+      {/* Task detail modal - View or Edit mode */}
+      {(isViewing || isEditing) && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"
-          aria-label="Task details"
-          onClick={() => setIsViewing(false)}
+          aria-label={isEditing ? "Edit task" : "Task details"}
+          onClick={() => { setIsViewing(false); setIsEditing(false); }}
         >
           <div className="absolute inset-0 bg-black/50" aria-hidden="true" />
           <div
-            className="relative bg-[#1a1f35] border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
+            className="relative bg-[#1a1f35] border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-3 mb-5">
-              <h2 className="text-white font-semibold text-base leading-snug">{task.title}</h2>
+              {isEditing ? (
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-base
+                             focus:outline-none focus:border-white/60"
+                  autoFocus
+                />
+              ) : (
+                <h2 className="text-white font-semibold text-base leading-snug">{task.title}</h2>
+              )}
               <button
-                onClick={() => setIsViewing(false)}
+                onClick={() => { setIsViewing(false); setIsEditing(false); }}
                 className="flex-shrink-0 text-white/40 hover:text-white transition-colors
                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded"
-                aria-label="Close details"
+                aria-label="Close"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
                   fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -302,12 +244,68 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
               </button>
             </div>
 
-            {/* Details */}
-            <div className="space-y-3">
+            {/* Content */}
+            <div className="space-y-4">
+              {/* Description */}
+              <div>
+                <span className="text-white/50 text-sm block mb-1">Description</span>
+                {isEditing ? (
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Add a description..."
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white
+                               placeholder-white/40 focus:outline-none focus:border-white/60 text-sm resize-none"
+                    rows={4}
+                    maxLength={2000}
+                  />
+                ) : (
+                  <p className="text-white/80 text-sm whitespace-pre-wrap">
+                    {task.description || <span className="text-white/30 italic">No description</span>}
+                  </p>
+                )}
+              </div>
+
               {/* Project */}
               <div className="flex items-center justify-between">
                 <span className="text-white/50 text-sm">Project</span>
-                {project ? (
+                {isEditing ? (
+                  <div className="relative">
+                    <select
+                      value={editProjectId}
+                      onChange={(e) => setEditProjectId(e.target.value)}
+                      className="bg-white/10 border border-white/20 rounded-lg pl-8 pr-8 py-1 text-sm text-white
+                                 focus:outline-none focus:border-white/60 appearance-none cursor-pointer"
+                    >
+                      <option value="">No project</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Color indicator overlay */}
+                    {editProjectId && (() => {
+                      const selectedProject = projects.find((p) => p.id === editProjectId)
+                      return selectedProject ? (
+                        <span
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: selectedProject.color }}
+                          aria-hidden="true"
+                        />
+                      ) : null
+                    })()}
+                    {/* Chevron icon */}
+                    <svg
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                ) : project ? (
                   <span className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: project.color }} aria-hidden="true" />
                     <span className="text-white text-sm">{project.name}</span>
@@ -320,18 +318,44 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
               {/* Pomodoros */}
               <div className="flex items-center justify-between">
                 <span className="text-white/50 text-sm">Pomodoros</span>
-                <span className="text-white text-sm font-mono">
-                  {task.actualPomodoros} / {task.estimatedPomodoros}
-                </span>
+                {isEditing ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditEstimate((v) => Math.max(1, v - 1))}
+                      className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 transition-colors
+                                 flex items-center justify-center text-white font-bold text-sm"
+                      aria-label="Decrease estimate"
+                    >
+                      −
+                    </button>
+                    <span className="w-12 text-center text-white font-mono text-sm">
+                      {task.actualPomodoros} / {editEstimate}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditEstimate((v) => Math.min(20, v + 1))}
+                      className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 transition-colors
+                                 flex items-center justify-center text-white font-bold text-sm"
+                      aria-label="Increase estimate"
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-white text-sm font-mono">
+                    {task.actualPomodoros} / {task.estimatedPomodoros}
+                  </span>
+                )}
               </div>
 
               {/* Progress bar */}
-              {task.estimatedPomodoros > 0 && (
+              {(isEditing ? editEstimate : task.estimatedPomodoros) > 0 && (
                 <div className="pt-1">
                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-white/60 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(100, (task.actualPomodoros / task.estimatedPomodoros) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (task.actualPomodoros / (isEditing ? editEstimate : task.estimatedPomodoros)) * 100)}%` }}
                     />
                   </div>
                 </div>
@@ -344,7 +368,60 @@ export function TaskItem({ task, isSelected }: TaskItemProps) {
                   {task.completed ? 'Completed' : 'In progress'}
                 </span>
               </div>
+
+              {/* Completed At */}
+              {task.completed && task.completedAt && (
+                <div className="flex items-center justify-between">
+                  <span className="text-white/50 text-sm">Completed at</span>
+                  <span className="text-white/60 text-sm font-mono">
+                    {new Date(task.completedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Footer actions */}
+            {isEditing ? (
+              <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-white/10">
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-white/70 hover:text-white transition-colors text-sm rounded-lg
+                             hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-white text-gray-800 font-medium rounded-lg
+                             hover:bg-white/90 transition-colors text-sm focus-visible:outline-none focus-visible:ring-2
+                             focus-visible:ring-white/50"
+                >
+                  Save
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-white/10">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg
+                             transition-colors text-sm focus-visible:outline-none focus-visible:ring-2
+                             focus-visible:ring-white/50 flex items-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Edit
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
